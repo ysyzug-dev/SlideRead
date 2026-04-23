@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SlideRead - 沉浸式同步阅读器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #F4F0EA; 
+            --pane-bg: #FAF9F6; 
+            --text-main: #2C2B29; 
+            --text-muted: #827E78;
+            --accent-color: #B95E40; 
+            --border-radius: 12px; 
+            --transition-speed: 0.4s;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-serif: Georgia, Cambria, "Times New Roman", Times, serif; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-ui);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+            background-image: radial-gradient(rgba(0,0,0,0.015) 1px, transparent 1px);
+            background-size: 4px 4px;
+        }
+
+        header {
+            height: 56px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+        }
+
+        .logo {
+            font-family: var(--font-serif);
+            font-size: 1.2rem;
+            font-weight: 400; 
+            color: var(--text-main);
+            letter-spacing: -0.2px;
+        }
+
+        .control-btn {
+            background: none;
+            border: 1px solid transparent;
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .control-btn:hover { background-color: rgba(0, 0, 0, 0.05); }
+
+        .workspace {
+            display: flex;
+            flex: 1;
+            padding: 0 16px 16px 16px;
+            gap: 16px;
+            height: calc(100vh - 56px);
+        }
+
+        .pane {
+            background-color: var(--pane-bg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 24px rgba(60, 55, 50, 0.05), 0 1px 3px rgba(0,0,0,0.02);
+            overflow-y: auto;
+            transition: flex-basis var(--transition-speed) cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(0,0,0,0.04);
+            position: relative;
+        }
+
+        .left-pane {
+            flex-basis: 30%; 
+            padding: 24px;
+            align-items: center;
+            background-color: #EFECE6;
+            scroll-behavior: smooth;
+        }
+
+        #pdf-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px; 
+        }
+
+        canvas {
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-radius: 4px;
+            border: 1px solid #E2DED5;
+            transition: all var(--transition-speed);
+        }
+
+        .right-pane {
+            flex-basis: 70%; 
+            padding: 48px 80px 80vh 80px; 
+            scroll-behavior: smooth; 
+        }
+
+        .workspace.focus-slide .left-pane { flex-basis: 70%; }
+        .workspace.focus-slide .right-pane { flex-basis: 30%; padding: 40px 24px 80vh 24px; }
+
+        .markdown-body {
+            font-family: var(--font-serif);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-ui);
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            margin-top: 50px;
+            margin-bottom: 16px;
+            font-weight: 500;
+            border-bottom: 1px solid #EAE5DB;
+            padding-bottom: 8px;
+            transition: color 0.3s;
+        }
+
+        .markdown-body h2.active-slide {
+            color: #000;
+            border-bottom-color: var(--accent-color);
+        }
+
+        .markdown-body p {
+            line-height: 1.85;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-size: 1.05rem;
+        }
+
+        /* === 控制中心 Modal 样式 === */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(244, 240, 234, 0.8); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--pane-bg); width: 680px; border-radius: var(--border-radius);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);
+            padding: 32px; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 24px; }
+        .modal-title { font-family: var(--font-serif); font-size: 1.3rem; }
+        .close-btn { cursor: pointer; color: var(--text-muted); background: none; border: none; font-size: 1.5rem;}
+        
+        .step-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; color: var(--text-main); }
+        .step-desc { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px; }
+        
+        .step-container { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px dashed #E2DED5; }
+        .step-container:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        .file-upload-wrapper { display: flex; align-items: center; gap: 12px; }
+        input[type="file"] { display: none; }
+        .upload-btn {
+            background: var(--pane-bg); border: 1px solid var(--accent-color); color: var(--accent-color);
+            padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .upload-btn:hover { background: var(--accent-color); color: white; }
+        .file-name { font-size: 0.85rem; color: var(--text-muted); }
+
+        .prompt-card {
+            background: #EFECE6; border-radius: 8px; padding: 16px; margin-bottom: 16px;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+        .prompt-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+        }
+        .prompt-name { font-weight: 600; font-size: 0.95rem; color: var(--text-main); }
+        .prompt-usage { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; }
+        
+        .sys-prompt-box {
+            background: #FAFAF8; padding: 12px; border-radius: 4px; font-family: monospace;
+            font-size: 0.85rem; color: #444; line-height: 1.6; border: 1px solid #E2DED5;
+            user-select: all; 
+        }
+        
+        .copy-btn {
+            background: white; border: 1px solid #DDD; padding: 4px 10px; border-radius: 4px; 
+            cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+        }
+        .copy-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+        
+        textarea {
+            width: 100%; height: 160px; padding: 12px; border-radius: 6px;
+            border: 1px solid #DDD; font-family: var(--font-ui); resize: vertical;
+            background: #FAFAF8; margin-bottom: 16px; font-size: 0.95rem;
+        }
+        textarea:focus { outline: none; border-color: var(--accent-color); }
+        
+        .action-btn {
+            width: 100%; padding: 12px; background: var(--text-main); color: white;
+            border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.2s;
+        }
+        .action-btn:hover { background: #000; }
+
+        .hint {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background-color: rgba(44, 43, 41, 0.85); color: #F4F0EA;
+            padding: 8px 20px; border-radius: 6px; font-size: 0.85rem;
+            backdrop-filter: blur(8px); pointer-events: none; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">SlideRead.</div>
+        <button class="control-btn" onclick="toggleModal()">控制中心</button>
+    </header>
+
+    <div class="workspace" id="workspace">
+        <div class="pane left-pane" id="pdf-pane">
+            <div id="pdf-container">
+                <p style="text-align:center; color: var(--text-muted); margin-top: 100px; font-family: var(--font-serif);">
+                    请在右上角“控制中心”载入 PDF 与讲稿...
+                </p>
+            </div>
+        </div>
+
+        <div class="pane right-pane" id="text-pane">
+            <div class="markdown-body" id="markdown-content">
+                 <p style="text-align:center; color: var(--text-muted); margin-top: 100px; font-family: var(--font-serif);">
+                    等待渲染...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="hint">按 <b>Tab</b> 键切换动态焦点</div>
+
+    <div class="modal-overlay" id="control-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">工作区设定</h3>
+                <button class="close-btn" onclick="toggleModal()">×</button>
+            </div>
+            
+            <div class="step-container">
+                <div class="step-title">1. 载入幻灯片 (PDF)</div>
+                <div class="file-upload-wrapper">
+                    <label for="pdf-upload" class="upload-btn">选择本地文件</label>
+                    <input type="file" id="pdf-upload" accept="application/pdf">
+                    <span class="file-name" id="file-name-display">未选择文件</span>
+                </div>
+            </div>
+
+            <div class="step-container">
+                <div class="step-title">2. 获取 AI 讲稿</div>
+                <p class="step-desc">请选择一种提示词发送给你的 AI 模型，生成带有正确锚点的文本。</p>
+
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span class="prompt-name">选项 A：全场景/全科目通用讲授提示词 (推荐)</span>
+                        <button class="copy-btn" onclick="copyText('full-prompt')">复制</button>
+                    </div>
+                    <p class="prompt-usage">预设了严谨的讲解要求、公式图表拆解、双语术语以及实战自测，自带锚点规则。任何科目均可一键使用。</p>
+                    <div class="sys-prompt-box" id="full-prompt">老师，我准备好学习下一课了。请根据我提供的课件，为我详细讲授本次的新内容。请你记住我的以下要求：1. 扮演该领域的专业授课教师，严格按照课件的内容、顺序和逻辑结构进行授课。2. 讲解必须以完整的口语化讲述口吻进行，全面、详细、严谨。请重点为我深度拆解核心概念、底层逻辑、推导公式以及相关的专业图表（如理论模型、曲线变化、代码结构等，视具体学科而定）。3. 所有的关键专业术语请务必附带英文原词。4. 在讲稿的最后，请根据本节课的重难点为我出1-2道实战自测题，检验我的学习效果。5. 如果课件标题中提及了某项核心内容但正文中缺乏详细展开，请你明确指出缺失的部分，并利用你的专业知识库为我补充讲授完整。
+【系统指令：强制分页锚点】你必须严格逐页生成讲稿，绝对不能跳过任何一页（包括纯标题、目录、过渡页或纯图片页）。在讲解每一页前，必须输出精确的标记 `## [Slide X]`（X为页码）作为占位符，即使该页无需讲解，正文留白即可。切记：幻灯片总页数必须与你输出的锚点数量完全一致！</div>
+                </div>
+
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <span class="prompt-name">选项 B：仅必备系统锚点指令 (高阶自定义)</span>
+                        <button class="copy-btn" onclick="copyText('anchor-prompt')">复制</button>
+                    </div>
+                    <p class="prompt-usage">如果你已经写好了自己的专属提示词，只需将这段文字附加在你的提示词末尾，即可保证同步阅读功能正常运行。</p>
+                    <div class="sys-prompt-box" id="anchor-prompt">【系统指令：强制分页锚点】你必须严格逐页生成讲稿，绝对不能跳过任何一页（包括纯标题、目录、过渡页或纯图片页）。在讲解每一页前，必须输出精确的标记 `## [Slide X]`（X为页码）作为占位符，即使该页无需讲解，正文留白即可。切记：幻灯片总页数必须与你输出的锚点数量完全一致！</div>
+                </div>
+            </div>
+
+            <div class="step-container" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                <div class="step-title">3. 渲染阅读区</div>
+                <textarea id="md-input" placeholder="将 AI 生成的 Markdown 文本粘贴至此..."></textarea>
+                <button class="action-btn" onclick="renderMarkdown()">开始沉浸式复习</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 基础交互与状态 ===
+        const workspace = document.getElementById('workspace');
+        const modal = document.getElementById('control-modal');
+        let pdfDoc = null;
+        let totalPages = 0;
+
+        window.onload = () => toggleModal();
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') { e.preventDefault(); workspace.classList.toggle('focus-slide'); }
+        });
+
+        function toggleModal() { modal.classList.toggle('active'); }
+        
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText.trim();
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = '已复制!';
+                btn.style.color = 'var(--accent-color)';
+                btn.style.borderColor = 'var(--accent-color)';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 2000);
+            });
+        }
+
+        // === Step 1: PDF 渲染逻辑 ===
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdfContainer = document.getElementById('pdf-container');
+
+        document.getElementById('pdf-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file || file.type !== 'application/pdf') return;
+            
+            document.getElementById('file-name-display').innerText = file.name;
+            const fileReader = new FileReader();
+            
+            fileReader.onload = function() {
+                const typedarray = new Uint8Array(this.result);
+                pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                    pdfDoc = pdf;
+                    totalPages = pdf.numPages;
+                    pdfContainer.innerHTML = ''; 
+                    renderAllPages();
+                });
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        async function renderAllPages() {
+            for (let num = 1; num <= totalPages; num++) {
+                const canvas = document.createElement('canvas');
+                canvas.id = `pdf-page-${num}`;
+                pdfContainer.appendChild(canvas);
+                
+                const page = await pdfDoc.getPage(num);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+            }
+        }
+
+        // === Step 3: Markdown 渲染 ===
+        function renderMarkdown() {
+            const mdText = document.getElementById('md-input').value;
+            if (!mdText.trim()) {
+                alert('请输入讲稿文本后再渲染！');
+                return;
+            }
+            if (!pdfDoc) {
+                alert('请先载入 PDF 幻灯片，以便建立同步链接！');
+                return;
+            }
+            
+            const html = marked.parse(mdText);
+            document.getElementById('markdown-content').innerHTML = html;
+            toggleModal(); 
+            setupBidirectionalSync(); 
+        }
+
+        // === 核心魔法：双向焦点同步 ===
+        function setupBidirectionalSync() {
+            const textPane = document.getElementById('text-pane');
+            const pdfPane = document.getElementById('pdf-pane');
+            const headings = document.querySelectorAll('.markdown-body h2');
+            
+            let isSyncing = false; 
+            let syncTimeout;
+            function lockSync() {
+                isSyncing = true;
+                clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(() => { isSyncing = false; }, 800); 
+            }
+
+            const textObserver = new IntersectionObserver((entries) => {
+                if (isSyncing) return; 
+
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        headings.forEach(h => h.classList.remove('active-slide'));
+                        entry.target.classList.add('active-slide');
+
+                        const match = entry.target.innerText.match(/\[Slide\s+(\d+)\]/i);
+                        if (match && match[1]) {
+                            const pageNum = parseInt(match[1]);
+                            const targetCanvas = document.getElementById(`pdf-page-${pageNum}`);
+                            if (targetCanvas) {
+                                lockSync();
+                                targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    }
+                });
+            }, {
+                root: textPane,
+                rootMargin: '-10% 0px -80% 0px', 
+                threshold: 0
+            });
+
+            headings.forEach(h2 => {
+                if(h2.innerText.includes('[Slide')) textObserver.observe(h2);
+            });
+
+            pdfPane.addEventListener('scroll', () => {
+                if (isSyncing) return; 
+
+                const paneCenterY = pdfPane.getBoundingClientRect().top + (pdfPane.clientHeight / 2);
+                let closestPageNum = 1;
+                let minDistance = Infinity;
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const canvas = document.getElementById(`pdf-page-${i}`);
+                    if (!canvas) continue;
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const canvasCenterY = rect.top + (rect.height / 2);
+                    const distance = Math.abs(canvasCenterY - paneCenterY);
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestPageNum = i;
+                    }
+                }
+
+                for (let h2 of headings) {
+                    if (h2.innerText.includes(`[Slide ${closestPageNum}]`)) {
+                        lockSync();
+                        headings.forEach(h => h.classList.remove('active-slide'));
+                        h2.classList.add('active-slide');
+                        h2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        break;
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
