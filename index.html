@@ -108,6 +108,12 @@
             border-radius: 4px;
             border: 1px solid #E2DED5;
             transition: all var(--transition-speed);
+            cursor: pointer; 
+        }
+        canvas:hover {
+            border-color: var(--accent-color);
+            transform: scale(1.02); 
+            box-shadow: 0 8px 24px rgba(185, 94, 64, 0.15);
         }
 
         .right-pane {
@@ -133,13 +139,19 @@
             margin-bottom: 16px;
             font-weight: 500;
             border-bottom: 1px solid #EAE5DB;
-            padding-bottom: 8px;
-            transition: color 0.3s;
+            padding: 8px;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.3s;
+            cursor: pointer; 
+        }
+        .markdown-body h2:hover {
+            background-color: rgba(185, 94, 64, 0.05); 
         }
 
         .markdown-body h2.active-slide {
             color: #000;
             border-bottom-color: var(--accent-color);
+            background-color: rgba(185, 94, 64, 0.03);
         }
 
         .markdown-body p {
@@ -149,7 +161,7 @@
             font-size: 1.05rem;
         }
 
-        /* === 控制中心 Modal 样式 === */
+        /* === 控制中心 Modal === */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(244, 240, 234, 0.8); backdrop-filter: blur(5px);
@@ -157,7 +169,7 @@
         }
         .modal-overlay.active { display: flex; }
         .modal {
-            background: var(--pane-bg); width: 680px; border-radius: var(--border-radius);
+            background: var(--pane-bg); width: 720px; border-radius: var(--border-radius);
             box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);
             padding: 32px; max-height: 90vh; overflow-y: auto;
         }
@@ -165,9 +177,7 @@
         .modal-title { font-family: var(--font-serif); font-size: 1.3rem; }
         .close-btn { cursor: pointer; color: var(--text-muted); background: none; border: none; font-size: 1.5rem;}
         
-        .step-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; color: var(--text-main); }
-        .step-desc { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px; }
-        
+        .step-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 12px; color: var(--text-main); }
         .step-container { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px dashed #E2DED5; }
         .step-container:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
@@ -180,20 +190,32 @@
         .upload-btn:hover { background: var(--accent-color); color: white; }
         .file-name { font-size: 0.85rem; color: var(--text-muted); }
 
+        .notice-box {
+            background-color: #EFECE6; border-left: 4px solid var(--accent-color);
+            padding: 16px; border-radius: 4px 8px 8px 4px; margin-bottom: 24px;
+        }
+        .notice-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; color: var(--text-main); }
+        .notice-text { font-size: 0.9rem; color: #444; line-height: 1.6; margin-bottom: 8px; }
+        .notice-list { margin-left: 20px; font-size: 0.9rem; color: #444; line-height: 1.6; }
+        .notice-list li { margin-bottom: 4px; }
+
         .prompt-card {
-            background: #EFECE6; border-radius: 8px; padding: 16px; margin-bottom: 16px;
-            border: 1px solid rgba(0,0,0,0.03);
+            background: #FAFAF8; border-radius: 8px; padding: 16px; margin-bottom: 16px;
+            border: 1px solid #E2DED5;
+        }
+        .prompt-card.recommended {
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 4px 12px rgba(185, 94, 64, 0.08);
         }
         .prompt-header {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
         }
         .prompt-name { font-weight: 600; font-size: 0.95rem; color: var(--text-main); }
-        .prompt-usage { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; }
+        .prompt-usage { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
         
         .sys-prompt-box {
-            background: #FAFAF8; padding: 12px; border-radius: 4px; font-family: monospace;
-            font-size: 0.85rem; color: #444; line-height: 1.6; border: 1px solid #E2DED5;
-            user-select: all; 
+            background: #F4F0EA; padding: 12px; border-radius: 4px; font-family: monospace;
+            font-size: 0.85rem; color: #444; line-height: 1.6; border: 1px solid #E2DED5; user-select: all; 
         }
         
         .copy-btn {
@@ -215,11 +237,27 @@
         }
         .action-btn:hover { background: #000; }
 
+        /* === 优化点：把 Hint 变成一个真正的交互按钮 === */
         .hint {
             position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
             background-color: rgba(44, 43, 41, 0.85); color: #F4F0EA;
-            padding: 8px 20px; border-radius: 6px; font-size: 0.85rem;
-            backdrop-filter: blur(8px); pointer-events: none; z-index: 10;
+            padding: 8px 24px; border-radius: 20px; font-size: 0.85rem;
+            backdrop-filter: blur(8px); z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer; /* 鼠标变成小手 */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* 平滑动画 */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .hint:hover {
+            background-color: rgba(29, 29, 31, 0.95);
+            transform: translateX(-50%) translateY(-3px); /* 悬停微上浮 */
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .hint:active {
+            transform: translateX(-50%) translateY(0); /* 点击时下压反馈 */
         }
     </style>
 </head>
@@ -248,7 +286,7 @@
         </div>
     </div>
 
-    <div class="hint">按 <b>Tab</b> 键切换动态焦点</div>
+    <div class="hint" onclick="toggleDynamicFocus()">按 <b>Tab</b> 键或 <b>点击此处</b> 切换焦点</div>
 
     <div class="modal-overlay" id="control-modal">
         <div class="modal">
@@ -267,26 +305,35 @@
             </div>
 
             <div class="step-container">
-                <div class="step-title">2. 获取 AI 讲稿</div>
-                <p class="step-desc">请选择一种提示词发送给你的 AI 模型，生成带有正确锚点的文本。</p>
+                <div class="step-title">2. 获取 AI 讲稿 (Prompt 设置)</div>
+                <div class="notice-box">
+                    <div class="notice-title">💡 使用说明与提示词技巧</div>
+                    <p class="notice-text">SlideRead 仅为一个<b>纯粹的双向同步阅读器</b>。教学文本的质量完全取决于你使用的 AI 模型和你编写的提示词（Prompt）。</p>
+                    <p class="notice-text">为了获得更高质量的讲解，<b>强烈建议你自定义提示词</b>。在给 AI 下达指令时，建议明确以下细节：</p>
+                    <ul class="notice-list">
+                        <li><b>角色设定：</b> “扮演一位顶尖的[学科]教授/资深研究员...”</li>
+                        <li><b>篇幅与深度：</b> “进行 5000 字以上的深度拆解，注重底层逻辑推导...”</li>
+                        <li><b>口吻与风格：</b> “语言通俗易懂，多用生活中的例子，态度严谨但幽默...”</li>
+                    </ul>
+                </div>
 
-                <div class="prompt-card">
+                <div class="prompt-card recommended">
                     <div class="prompt-header">
-                        <span class="prompt-name">选项 A：全场景/全科目通用讲授提示词 (推荐)</span>
-                        <button class="copy-btn" onclick="copyText('full-prompt')">复制</button>
+                        <span class="prompt-name">选项 A：核心同步指令 (强烈推荐，搭配自定义提示词)</span>
+                        <button class="copy-btn" onclick="copyText('anchor-prompt')">复制指令</button>
                     </div>
-                    <p class="prompt-usage">预设了严谨的讲解要求、公式图表拆解、双语术语以及实战自测，自带锚点规则。任何科目均可一键使用。</p>
-                    <div class="sys-prompt-box" id="full-prompt">老师，我准备好学习下一课了。请根据我提供的课件，为我详细讲授本次的新内容。请你记住我的以下要求：1. 扮演该领域的专业授课教师，严格按照课件的内容、顺序和逻辑结构进行授课。2. 讲解必须以完整的口语化讲述口吻进行，全面、详细、严谨。请重点为我深度拆解核心概念、底层逻辑、推导公式以及相关的专业图表（如理论模型、曲线变化、代码结构等，视具体学科而定）。3. 所有的关键专业术语请务必附带英文原词。4. 在讲稿的最后，请根据本节课的重难点为我出1-2道实战自测题，检验我的学习效果。5. 如果课件标题中提及了某项核心内容但正文中缺乏详细展开，请你明确指出缺失的部分，并利用你的专业知识库为我补充讲授完整。
-【系统指令：强制分页锚点】你必须严格逐页生成讲稿，绝对不能跳过任何一页（包括纯标题、目录、过渡页或纯图片页）。在讲解每一页前，必须输出精确的标记 ## [Slide X]（X为页码）作为占位符，即使该页无需讲解，正文留白即可。格式警告：必须将该标记作为普通的 Markdown 二级标题输出，绝对不允许将其放在代码块（```）或行内代码（`）中！ 切记：幻灯片总页数必须与你输出的锚点数量完全一致！</div>
+                    <p class="prompt-usage">按照上方技巧写好你自己的专属提示词后，只需将下面这段系统指令<b>附加在你的提示词最末尾</b>，即可完美激活阅读器的同步翻页功能。</p>
+                    <div class="sys-prompt-box" id="anchor-prompt">【系统指令：强制分页锚点】你必须严格逐页生成讲稿，绝对不能跳过任何一页（包括纯标题、目录、过渡页或纯图片页）。在讲解每一页前，必须输出精确的标记 ## [Slide X]（X为页码）作为占位符，即使该页无需讲解，正文留白即可。⚠️格式警告：必须将该标记作为普通的 Markdown 二级标题输出，绝对不允许将其放在代码块（```）或行内代码（`）中！ 切记：幻灯片总页数必须与你输出的锚点数量完全一致！</div>
                 </div>
 
                 <div class="prompt-card">
                     <div class="prompt-header">
-                        <span class="prompt-name">选项 B：仅必备系统锚点指令 (高阶自定义)</span>
-                        <button class="copy-btn" onclick="copyText('anchor-prompt')">复制</button>
+                        <span class="prompt-name" style="color: var(--text-muted);">选项 B：预设基础提示词 (仅供初次试用体验)</span>
+                        <button class="copy-btn" onclick="copyText('full-prompt')">复制提示词</button>
                     </div>
-                    <p class="prompt-usage">如果你已经写好了自己的专属提示词，只需将这段文字附加在你的提示词末尾，即可保证同步阅读功能正常运行。</p>
-                    <div class="sys-prompt-box" id="anchor-prompt">【系统指令：强制分页锚点】你必须严格逐页生成讲稿，绝对不能跳过任何一页（包括纯标题、目录、过渡页或纯图片页）。在讲解每一页前，必须输出精确的标记 ## [Slide X]（X为页码）作为占位符，即使该页无需讲解，正文留白即可。格式警告：必须将该标记作为普通的 Markdown 二级标题输出，绝对不允许将其放在代码块（```）或行内代码（`）中！ 切记：幻灯片总页数必须与你输出的锚点数量完全一致！</div>
+                    <p class="prompt-usage" style="color: var(--text-muted);">这段长提示词仅供跑通工具流程。因未针对特定学科和个人习惯优化，生成效果可能泛泛而谈。要获得极佳复习效果，请务必使用上方选项 A。</p>
+                    <div class="sys-prompt-box" id="full-prompt">老师，我准备好学习下一课了。请根据我提供的课件，为我详细讲授本次的新内容。请你记住我的以下要求：1. 扮演该领域的专业授课教师，严格按照课件的内容进行授课。2. 讲解必须以完整的口语化讲述口吻进行。3. 关键专业术语附带英文原词。
+【系统指令：强制分页锚点】你必须严格逐页生成讲稿，绝对不能跳过任何一页（包括纯标题、目录、过渡页或纯图片页）。在讲解每一页前，必须输出精确的标记 ## [Slide X]（X为页码）作为占位符，即使该页无需讲解，正文留白即可。⚠️格式警告：必须将该标记作为普通的 Markdown 二级标题输出，绝对不允许将其放在代码块（```）或行内代码（`）中！ 切记：幻灯片总页数必须与你输出的锚点数量完全一致！</div>
                 </div>
             </div>
 
@@ -299,7 +346,6 @@
     </div>
 
     <script>
-        // === 基础交互与状态 ===
         const workspace = document.getElementById('workspace');
         const modal = document.getElementById('control-modal');
         let pdfDoc = null;
@@ -307,8 +353,17 @@
 
         window.onload = () => toggleModal();
 
+        // 提取切换焦点的功能为一个独立函数
+        function toggleDynamicFocus() {
+            workspace.classList.toggle('focus-slide');
+        }
+
+        // 键盘 Tab 键触发
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Tab') { e.preventDefault(); workspace.classList.toggle('focus-slide'); }
+            if (e.key === 'Tab') { 
+                e.preventDefault(); 
+                toggleDynamicFocus(); 
+            }
         });
 
         function toggleModal() { modal.classList.toggle('active'); }
@@ -329,7 +384,7 @@
             });
         }
 
-        // === Step 1: PDF 渲染逻辑 ===
+        // === PDF 渲染 ===
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const pdfContainer = document.getElementById('pdf-container');
 
@@ -356,6 +411,9 @@
             for (let num = 1; num <= totalPages; num++) {
                 const canvas = document.createElement('canvas');
                 canvas.id = `pdf-page-${num}`;
+                
+                canvas.onclick = () => jumpToText(num);
+                
                 pdfContainer.appendChild(canvas);
                 
                 const page = await pdfDoc.getPage(num);
@@ -368,15 +426,11 @@
             }
         }
 
-        // === Step 3: Markdown 渲染 ===
+        // === Markdown 渲染 ===
         function renderMarkdown() {
             const mdText = document.getElementById('md-input').value;
-            if (!mdText.trim()) {
-                alert('请输入讲稿文本后再渲染！');
-                return;
-            }
-            if (!pdfDoc) {
-                alert('请先载入 PDF 幻灯片，以便建立同步链接！');
+            if (!mdText.trim() || !pdfDoc) {
+                alert('请确保已上传 PDF 并粘贴了讲稿文本！');
                 return;
             }
             
@@ -386,44 +440,73 @@
             setupBidirectionalSync(); 
         }
 
-        // === 核心魔法：双向焦点同步 ===
+        // === 核心逻辑优化：锁机制、跳转与同步 ===
+        let isSyncing = false; 
+        let syncTimeout;
+
+        function lockSync(duration = 600) {
+            isSyncing = true;
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => { isSyncing = false; }, duration); 
+        }
+
+        function jumpToText(pageNum) {
+            const headings = document.querySelectorAll('.markdown-body h2');
+            for (let h2 of headings) {
+                if (h2.innerText.includes(`[Slide ${pageNum}]`)) {
+                    lockSync(800); 
+                    headings.forEach(h => h.classList.remove('active-slide'));
+                    h2.classList.add('active-slide');
+                    h2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    break;
+                }
+            }
+        }
+
+        function jumpToPdf(pageNum) {
+            const targetCanvas = document.getElementById(`pdf-page-${pageNum}`);
+            if (targetCanvas) {
+                lockSync(800); 
+                targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                const headings = document.querySelectorAll('.markdown-body h2');
+                headings.forEach(h => h.classList.remove('active-slide'));
+                event.target.classList.add('active-slide');
+            }
+        }
+
         function setupBidirectionalSync() {
             const textPane = document.getElementById('text-pane');
             const pdfPane = document.getElementById('pdf-pane');
             const headings = document.querySelectorAll('.markdown-body h2');
-            
-            let isSyncing = false; 
-            let syncTimeout;
-            function lockSync() {
-                isSyncing = true;
-                clearTimeout(syncTimeout);
-                syncTimeout = setTimeout(() => { isSyncing = false; }, 800); 
-            }
+
+            headings.forEach(h2 => {
+                const match = h2.innerText.match(/\[Slide\s+(\d+)\]/i);
+                if (match && match[1]) {
+                    const pageNum = parseInt(match[1]);
+                    h2.onclick = (e) => jumpToPdf(pageNum);
+                }
+            });
 
             const textObserver = new IntersectionObserver((entries) => {
                 if (isSyncing) return; 
 
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
-                        headings.forEach(h => h.classList.remove('active-slide'));
-                        entry.target.classList.add('active-slide');
-
                         const match = entry.target.innerText.match(/\[Slide\s+(\d+)\]/i);
                         if (match && match[1]) {
                             const pageNum = parseInt(match[1]);
                             const targetCanvas = document.getElementById(`pdf-page-${pageNum}`);
                             if (targetCanvas) {
-                                lockSync();
+                                lockSync(400); 
+                                headings.forEach(h => h.classList.remove('active-slide'));
+                                entry.target.classList.add('active-slide');
                                 targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             }
                         }
                     }
                 });
-            }, {
-                root: textPane,
-                rootMargin: '-10% 0px -80% 0px', 
-                threshold: 0
-            });
+            }, { root: textPane, rootMargin: '-10% 0px -80% 0px', threshold: 0 });
 
             headings.forEach(h2 => {
                 if(h2.innerText.includes('[Slide')) textObserver.observe(h2);
@@ -452,7 +535,7 @@
 
                 for (let h2 of headings) {
                     if (h2.innerText.includes(`[Slide ${closestPageNum}]`)) {
-                        lockSync();
+                        lockSync(400); 
                         headings.forEach(h => h.classList.remove('active-slide'));
                         h2.classList.add('active-slide');
                         h2.scrollIntoView({ behavior: 'smooth', block: 'start' });
