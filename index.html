@@ -6,6 +6,22 @@
     <title>SlideRead - 沉浸式同步阅读器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        },
+        svg: {
+          fontCache: 'global'
+        }
+      };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+
     <style>
         :root {
             --bg-color: #F4F0EA; 
@@ -161,6 +177,14 @@
             font-size: 1.05rem;
         }
 
+        /* 修复数学公式渲染后的溢出问题 */
+        .markdown-body mjx-container {
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%;
+            padding: 4px 0;
+        }
+
         /* === 控制中心 Modal === */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -237,27 +261,26 @@
         }
         .action-btn:hover { background: #000; }
 
-        /* === 优化点：把 Hint 变成一个真正的交互按钮 === */
         .hint {
             position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
             background-color: rgba(44, 43, 41, 0.85); color: #F4F0EA;
             padding: 8px 24px; border-radius: 20px; font-size: 0.85rem;
             backdrop-filter: blur(8px); z-index: 10;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            cursor: pointer; /* 鼠标变成小手 */
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* 平滑动画 */
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
         .hint:hover {
             background-color: rgba(29, 29, 31, 0.95);
-            transform: translateX(-50%) translateY(-3px); /* 悬停微上浮 */
+            transform: translateX(-50%) translateY(-3px); 
             box-shadow: 0 6px 16px rgba(0,0,0,0.2);
             border-color: rgba(255, 255, 255, 0.2);
         }
         
         .hint:active {
-            transform: translateX(-50%) translateY(0); /* 点击时下压反馈 */
+            transform: translateX(-50%) translateY(0); 
         }
     </style>
 </head>
@@ -353,12 +376,10 @@
 
         window.onload = () => toggleModal();
 
-        // 提取切换焦点的功能为一个独立函数
         function toggleDynamicFocus() {
             workspace.classList.toggle('focus-slide');
         }
 
-        // 键盘 Tab 键触发
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Tab') { 
                 e.preventDefault(); 
@@ -426,7 +447,7 @@
             }
         }
 
-        // === Markdown 渲染 ===
+        // === 【修改点】带有数学公式支持的 Markdown 渲染 ===
         function renderMarkdown() {
             const mdText = document.getElementById('md-input').value;
             if (!mdText.trim() || !pdfDoc) {
@@ -434,13 +455,22 @@
                 return;
             }
             
+            // 先通过 marked 渲染常规文本
             const html = marked.parse(mdText);
             document.getElementById('markdown-content').innerHTML = html;
             toggleModal(); 
-            setupBidirectionalSync(); 
+            
+            // 让 MathJax 接管页面渲染数学公式
+            if (window.MathJax) {
+                // typesetPromise 是一个异步操作，等公式全部排版完毕后，再触发滚动同步绑定
+                MathJax.typesetPromise([document.getElementById('markdown-content')]).then(() => {
+                    setupBidirectionalSync(); 
+                }).catch((err) => console.log('数学公式渲染出错: ', err));
+            } else {
+                setupBidirectionalSync(); 
+            }
         }
 
-        // === 核心逻辑优化：锁机制、跳转与同步 ===
         let isSyncing = false; 
         let syncTimeout;
 
